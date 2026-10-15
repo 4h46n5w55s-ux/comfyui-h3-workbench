@@ -20,8 +20,10 @@ Per-step cost is attention-dominated, not weight-streaming dominated:
 Wall clock therefore grows faster than linearly in frame count. Per second of finished video:
 2s ~7.5 min, 5s ~9 min, 8s ~11 min, 15s ~17 min. Doubling resolution roughly doubles it again.
 
-Consequence: prefer 2s segments. A 20s piece as 10x2s costs ~1.3 h (4-step) or ~2.5 h (8-step),
-while a single 15s clip costs ~4.2 h.
+Consequence: shorter segments are cheaper per second of finished video. A 20s piece as 10x2s costs
+~1.3 h (4-step) or ~2.5 h (8-step), while a single 15s clip costs ~4.2 h. That is a cost argument,
+not a quality one: weigh it against the trained range of 124-362 frames per segment rather than
+picking short segments by reflex.
 
 ## Job spec fields
 
@@ -31,7 +33,7 @@ while a single 15s clip costs ~4.2 h.
 | `start_image` | Filename inside `D:\ComfyUI\input` used as segment 1's first frame. |
 | `tier` | `fast` (4-step LoRA) or `quality` (8-step LoRA). |
 | `megapixels` | Resolution selector value: 0.5 -> 960x544, 0.98 -> 1344x768, 0.2 -> 608x352. |
-| `segment_frames` | Frames per segment. 56 = the model's 2s grid slot (2.33s). |
+| `segment_frames` | Frames per segment; must be `17k+5`. The workbench offers 56-362. Trained range is 124-362 (5.17-15.08s); 56 (2.33s) is the cheap slot below it. |
 | `segments` | Number of chained segments. |
 | `crossfade` | Seconds of audio crossfade during assembly; 0 = plain `-c copy` concat. |
 | `prompts` | One beat per segment. Shorter lists fall back to a placeholder template. |

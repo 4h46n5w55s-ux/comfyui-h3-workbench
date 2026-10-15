@@ -73,10 +73,15 @@ Keep the profile's output language consistent - Chinese-friendly means Chinese b
 Collect before building anything:
 
 1. **Start image** - a filename already in `D:\ComfyUI\input`.
-2. **Segment beats** - one 2-second beat per segment, in the user's own words. Never invent story.
+2. **Segment beats** - one beat per segment, in the user's own words. Never invent story.
 3. **Tier** - `fast` (4-step turbo LoRA, ~8 min/segment) or `quality` (8-step LoRA, ~15 min/segment).
-4. **Segment count** - 5 = 10s, 10 = 20s, 15 = 30s; other counts work too.
-5. **Resolution** - 0.5 MP (960x544) default; 0.98 MP (1344x768) is the native ceiling at roughly double the time.
+4. **Segment length** - `segment_frames` must sit on H3's `17k+5` grid. The model is only trained on
+   **124-362 frames (5.17-15.08s)**, so treat that as the working range and flag anything below 124 as
+   out-of-spec rather than picking it silently.
+5. **Segment count** - not a fixed ladder. Total runtime is count x length, and the count follows the
+   shot list; 4 segments of 124 frames is ~21s.
+6. **Resolution** - 0.5 MP (960x544) default; 0.98 MP (1344x768) is the native ceiling at roughly double
+   the time; 0.4 MP and 0.2 MP are also available.
 
 Run `plan` first - it builds and server-validates the chain without rendering. Show the segment table
 with the estimated wall clock, and submit only after the user agrees. Before any render, the
@@ -106,7 +111,7 @@ shot that has already been rendered can never block the remainder.
 `scripts/start_h3_workbench.bat` (there is also a desktop shortcut `H3 工作台`, hotkey `Ctrl+Alt+H`).
 
 Reach for it when the user wants to click rather than chat - above all when they have many assets
-and picking the right start frame matters. The centre pane is a **shots table**, one row per 2.3s
+and picking the right start frame matters. The centre pane is a **shots table**, one row per
 segment (timecode / 画面节拍 / 镜头 / 声音 / 参考素材 / 自检) with that segment's full prompt on the
 row directly beneath. Bind references per segment: click the `+` in a row's 参考素材 cell to arm it,
 then click the material wall (or drag a thumbnail onto the row). The wall shows a `used-in-shot`
@@ -151,7 +156,8 @@ port-busy message.
 
 ## Non-obvious constraints
 
-- A "2-second" segment is really 56 frames = 2.33s; cutting each segment to 48 frames in the edit gives exact 2.0s units.
+- Segment length is a knob, not a fixed 2-second slot: `length` must sit on H3's `17k+5` grid, and the model is trained on 124-362 frames (5.17-15.08s at 24 fps). 56 frames (2.33s) sits below that range - it still renders and it is the cheapest end of the performance curve, so it is a legitimate pick when total wall clock matters more than per-segment fidelity. Choose it deliberately and say which length was chosen; do not present it as the default.
+- Cutting 56-frame segments to 48 frames in the edit gives exact 2.0s units.
 - `fl2va` (first/last frame) and `ref2va` (reference images) are different nodes with different weights, so exact shared-frame chaining and reference-image locking cannot both apply to one segment. The relay chain uses `fl2va`; identity continuity comes from each segment starting on the previous segment's last frame. Ref2VA prompts therefore need their own rendering route if the user wants reference locking.
 - Adjacent segments share one frame, so concatenating without trimming leaves a one-frame hold.
 - Segment audio is generated jointly and concatenated by the graph, but ComfyUI has no audio crossfade node - seams are hard cuts. Either apply ffmpeg `acrossfade` afterwards or discard segment audio and lay one continuous track.
