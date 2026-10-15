@@ -45,6 +45,69 @@ cp -r comfyui-h3-workbench/skills/comfyui-h3-workbench ~/.codex/skills/
 
 放进项目的 `.agents/skills/` 目录，Codex 扫描仓库时会自动发现。
 
+## 使用
+
+装好后在 Codex 里显式点它的名字：
+
+```text
+$comfyui-h3-workbench 把这段故事写成 H3 提示词：<你的故事>
+```
+
+也可以不点名，直接描述任务，Codex 会按技能的 description 自己匹配。下面的命令都假设你已经满足
+后面的「环境要求」。
+
+### 一个最小流程
+
+**第 1 步 · 先只写提示词，别渲染**
+
+```text
+用 $comfyui-h3-workbench 把这句想法写成 Ref2VA 提示词，先不要渲染：
+一个修理工在雨夜的天台上发现一台还在运转的旧收音机
+```
+
+技能会先跟你确认模式和素材角色（`@image1` 到底控制什么），再按五段体输出。素材角色没写清楚的
+时候它会追问，这是设计如此，不是卡住。
+
+**第 2 步 · 出分镜表**
+
+把起始帧文件放进 ComfyUI 的 `input` 目录，然后：
+
+```text
+按这个提示词规划 10 段（约 20 秒），fast 档，960x544，先 plan 给我看分镜表和预计耗时
+```
+
+`plan` 只建链并做服务端校验，**不渲染**。段数换算：5 段 ≈ 10 秒，10 段 ≈ 20 秒，15 段 ≈ 30 秒。
+
+**第 3 步 · 确认后再渲染**
+
+```text
+确认，开始 run，跑完直接 assemble 拼成 MP4
+```
+
+渲染以小时计，`run` 会作为后台会话跑。中途失败用 `--resume` 从断点续，**已完成的段不会重渲**。
+提交前会强制过一遍规则层自检，红项直接挡住，不会让有问题的任务白跑几小时 GPU。
+
+**第 4 步 · 或者用可视化工作台**
+
+```text
+启动 H3 工作台
+```
+
+也可以双击桌面快捷方式 `H3 工作台`（热键 `Ctrl+Alt+H`），界面在 `http://127.0.0.1:8189`。
+分镜表格、素材墙、逐段绑定参考都在这里，素材多、需要肉眼挑首帧时比对话方便。
+
+### 不走对话，直接调脚本
+
+```bash
+D:\ComfyUI\python\python.exe <skill>\scripts\h3_pipeline.py plan     --spec <job.json>
+D:\ComfyUI\python\python.exe <skill>\scripts\h3_pipeline.py run      --spec <job.json>
+D:\ComfyUI\python\python.exe <skill>\scripts\h3_pipeline.py status   --spec <job.json>
+D:\ComfyUI\python\python.exe <skill>\scripts\h3_pipeline.py assemble --spec <job.json>
+```
+
+任务清单从 `scripts/job_example.json` 起手改。想看逐条的写作规则和失败处理，读
+`skills/comfyui-h3-workbench/SKILL.md` 和它旁边的 `references/`。
+
 ## 环境要求
 
 这个技能是按**一台具体的机器**写出来的，脚本里有硬编码的 Windows 绝对路径。在别的机器上用之前，
