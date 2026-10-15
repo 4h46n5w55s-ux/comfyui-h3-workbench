@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+
+# local run state / logs
+h3_runs/
+*.log
+_thumbs/
+_settings.json
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

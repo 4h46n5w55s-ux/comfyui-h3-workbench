@@ -1,0 +1,7 @@
+interface:
+  display_name: "ComfyUI H3 视频工作台"
+  short_description: "写 H3 提示词并监督本地 ComfyUI 生成连续分段视频"
+  default_prompt: "用 $comfyui-h3-workbench 把这段故事写成 H3 提示词并生成 20 秒连续视频。"
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ComfyUI H3 工作台</title>
+<style>
+  :root{
+    --bg:#17181b; --panel:#1e2024; --line:#2c2f35; --line2:#3a3e46;
+    --fg:#e6e7ea; --dim:#9aa0a8; --acc:#4fb3a4; --warn:#d9a441; --bad:#d8675f; --ok:#5fb86b;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--fg);font:13px/1.5 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{background:#262a30;border:1px solid var(--line2);border-radius:6px;padding:6px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  button:hover{border-color:var(--acc)}
+  button.primary{background:var(--acc);border-color:var(--acc);color:#0e1513;font-weight:600}
+  button.danger:hover{border-color:var(--bad);color:var(--bad)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  header{display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+  header h1{font-size:14px;margin:0;font-weight:600;letter-spacing:0}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border:1px solid var(--line2);border-radius:999px;color:var(--dim)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+  .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)} .dot.acc{background:var(--acc)}
+  main{display:grid;grid-template-columns:236px minmax(0,1fr) 330px;gap:0;height:calc(100vh - 45px)}
+  .col{overflow:auto;padding:12px}
+  .col.left{border-right:1px solid var(--line)}
+  .col.right{border-left:1px solid var(--line)}
+  .sec{margin-bottom:16px}
+  .sec>h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:0 0 8px}
+  .job{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid transparent;border-radius:6px;cursor:pointer}
+  .job:hover{background:#22252a}
+  .job.sel{background:#243033;border-color:var(--acc)}
+  .job .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .job .ct{color:var(--dim);font-variant-numeric:tabular-nums}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  label.f{display:block}
+  label.f>span{display:block;color:var(--dim);margin-bottom:4px;font-size:12px}
+  input[type=text],input[type=number],select,textarea{width:100%;background:#121316;border:1px solid var(--line2);border-radius:6px;padding:6px 8px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+  textarea{resize:vertical;font:12px/1.55 var(--mono);min-height:62px}
+  .segrow{display:grid;grid-template-columns:34px minmax(0,1fr) 30px;gap:8px;align-items:start;margin-bottom:8px}
+  .segno{padding-top:6px;color:var(--dim);text-align:right;font-variant-numeric:tabular-nums}
+  .segrow .del{padding:5px 7px}
+  .actions{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+  pre{background:#121316;border:1px solid var(--line);border-radius:6px;padding:9px;margin:0;white-space:pre-wrap;word-break:break-word;font:11.5px/1.5 var(--mono);color:#c9ccd1;max-height:280px;overflow:auto}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chip{border:1px solid var(--line2);border-radius:5px;padding:2px 7px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .chip.done{border-color:var(--ok);color:var(--ok)}
+  .bar{height:6px;background:#121316;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin:8px 0}
+  .bar>i{display:block;height:100%;background:var(--acc);width:0}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .filelist{display:flex;flex-direction:column;gap:4px;max-height:180px;overflow:auto}
+  .filelist a{font:11.5px/1.5 var(--mono)}
+  video{width:100%;border:1px solid var(--line2);border-radius:6px;background:#000}
+  .hint{color:var(--dim);font-size:12px}
+  .ctrl{border:1px solid var(--line2);border-radius:6px;padding:2px;display:inline-flex}
+  .ctrl button{border:none;background:none;padding:4px 10px;border-radius:4px}
+  .ctrl button.on{background:#2b3b39;color:var(--acc)}
+  .mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;max-height:300px;overflow:auto;padding:2px;border:1px dashed transparent}
+  .mats.drop{border-color:var(--acc);background:#1d2a29}
+  .mat{border:1px solid var(--line2);border-radius:6px;overflow:hidden;background:#121316;cursor:pointer}
+  .mat:hover{border-color:var(--acc)}
+  .mat.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+  .mat img{display:block;width:100%;height:56px;object-fit:cover;background:#0d0e10}
+  .mat span{display:block;padding:3px 5px;font-size:10.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mat.sel span{color:var(--acc)}
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:6px}
+  table.shots{border-collapse:collapse;width:100%;table-layout:fixed}
+  table.shots th{position:sticky;top:0;background:var(--panel);text-align:left;font-size:11px;color:var(--dim);
+    font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line);z-index:1}
+  table.shots td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr.shot-main td{background:#1b1d21}
+  tr.shot-prompt td{border-bottom:1px solid var(--line2)}
+  table.shots input[type=text]{padding:4px 6px;font-size:12px}
+  table.shots textarea{min-height:56px;font-size:11.5px}
+  td.num{color:var(--dim);text-align:right;font-variant-numeric:tabular-nums}
+  td.time{color:var(--dim);font:11.5px/1.4 var(--mono);white-space:nowrap}
+  td.refs{white-space:nowrap}
+  button.mini{padding:2px 6px;font-size:11px;line-height:1.2}
+  .refchip{position:relative;display:inline-block;margin-right:3px;vertical-align:middle}
+  .refchip img{width:34px;height:24px;object-fit:cover;border:1px solid var(--line2);border-radius:4px;display:block}
+  .refchip b{position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;border-radius:999px;
+    font-size:10px;line-height:13px;width:13px;text-align:center;cursor:pointer}
+  .chk{text-align:center}
+  .chk i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3a3e46}
+  .chk i.ok{background:var(--ok)} .chk i.warn{background:var(--warn)} .chk i.bad{background:var(--bad)}
+  tr.assign td{box-shadow:inset 0 0 0 1px var(--acc)}
+  .mat{position:relative}
+  .mat .use{position:absolute;top:2px;right:2px;background:#0e1513cc;color:var(--acc);border-radius:4px;
+    font-size:10px;padding:0 4px;max-width:90%;overflow:hidden;white-space:nowrap}
+  .mat .del{position:absolute;top:3px;left:3px;width:20px;height:20px;padding:0;border-radius:4px;
+    background:#0e1513cc;color:#e08a84;border:1px solid #6b403c;font-size:12px;line-height:1;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.72;z-index:2}
+  .mat:hover .del{opacity:1}
+  .mat .del:hover{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .regen{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line2);
+    border-radius:6px;padding:3px 7px;background:#1b1d21}
+  .regen input[type=number]{width:58px;padding:4px 6px}
+  .regen .hint{font-size:12px;margin:0}
+  td.segvid{white-space:nowrap}
+  td.segvid video{display:block;width:128px;height:72px;border-radius:4px;border:1px solid var(--line2);background:#000}
+  td.segvid .mini{margin-top:3px}
+  .pacerow{display:flex;gap:6px;align-items:flex-start}
+  .pacerow select{width:74px;flex:none;padding:4px 6px;font-size:12px}
+  .pacerow textarea{flex:1}
+  .mattools{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+  .mattools input[type=text]{flex:1;padding:4px 6px;font-size:12px}
+  .mattools .ctrl button{padding:3px 8px;font-size:11.5px}
+  .gate{border:1px solid var(--line2);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:12px}
+  .gate.ok{border-color:#2f5c3a;background:#16211a}
+  .gate.blocked{border-color:#6d3a36;background:#211716}
+  .gate>div{display:flex;align-items:center;gap:7px;font-weight:600}
+  .gate.ok>div{color:var(--ok)} .gate.blocked>div{color:var(--bad)}
+  .gate ul{margin:6px 0 0;padding-left:18px;color:#d8dadd}
+  .gate ul li{margin:2px 0}
+  .gate .sc{color:var(--dim)}
+  .gate details{margin-top:6px}
+  .gate details>summary{cursor:pointer;color:var(--warn)}
+  .gate details ul{color:var(--dim)}
+  .subnav{position:sticky;top:-12px;z-index:6;display:flex;gap:6px;flex-wrap:wrap;
+    padding:8px 0;margin:-4px 0 10px;background:var(--bg);border-bottom:1px solid var(--line)}
+  .subnav button{padding:4px 10px;font-size:12px}
+  .subnav button.on{border-color:var(--acc);color:var(--acc)}
+  .ctxmenu{position:fixed;z-index:60;min-width:186px;background:var(--panel);
+    border:1px solid var(--line2);border-radius:6px;padding:4px;box-shadow:0 8px 24px #000a}
+  .ctxmenu button{display:block;width:100%;text-align:left;border:none;background:none;
+    padding:6px 9px;border-radius:4px;font-size:12px;white-space:nowrap}
+  .ctxmenu button:hover{background:#3a2321;color:var(--bad)}
+  .ctxmenu button:disabled{opacity:.4;cursor:not-allowed}
+  .ctxmenu button:disabled:hover{background:none;color:inherit}
+  .ctxmenu button.danger{color:#e08a84}
+
+  /* narrow viewports: stack the three panes instead of overlapping them */
+  @media (max-width:1120px){
+    main{grid-template-columns:minmax(0,1fr);height:auto}
+    .col{overflow:visible}
+    .col.left{border-right:none;border-bottom:1px solid var(--line)}
+    .col.right{border-left:none;border-top:1px solid var(--line)}
+    table.shots{min-width:820px}
+    .mats{max-height:none}
+    .filelist{max-height:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9l3 3-3 3"/><path d="M13 15h3"/></svg>
+  <h1>ComfyUI H3 工作台</h1>
+  <span class="pill"><i class="dot" id="comfyDot"></i><span id="comfyTxt">ComfyUI …</span></span>
+  <span class="pill"><span id="queueTxt">队列 —</span></span>
+  <span style="flex:1"></span>
+  <span class="pill"><i class="dot acc" id="pollDot"></i><span id="pollTxt">—</span></span>
+  <span class="ctrl" id="modeCtrl" title="命令模式：我等你指令再动手；自主模式：我按已定的计划自行决定并执行，不打断你"><button data-v="command">命令</button><button data-v="auto">自主</button></span>
+  <span class="pill" title="页面构建时间；和在用的构建对不上就说明标签页是旧的，需要刷新"><span id="buildTxt">构建 —</span></span>
+  <button id="btnRefresh" title="立即刷新"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>刷新</button>
+</header>
+
+<main>
+  <div class="col left">
+    <div class="sec">
+      <h2>任务</h2>
+      <button class="primary" id="btnNew" style="width:100%;justify-content:center">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>新建任务</button>
+      <div id="jobList" style="margin-top:10px"></div>
+      <p class="hint" style="margin:8px 0 0">右键任务可删除</p>
+    </div>
+  </div>
+
+  <div class="col" id="centerCol">
+    <div id="editor" style="display:none">
+      <div class="subnav" id="subnav">
+        <button data-to="secSetup">任务设置</button>
+        <button data-to="secScript">① 剧本</button>
+        <button data-to="secShots">② 分镜表</button>
+        <button data-to="secOps">③ 操作</button>
+      </div>
+      <div class="sec" id="secSetup">
+        <h2>任务设置</h2>
+        <div class="grid">
+          <label class="f"><span>任务名</span><input type="text" id="fName"></label>
+          <label class="f"><span>起始图（input 目录）</span><select id="fImage"></select></label>
+          <label class="f"><span>结束图（可选 · 只钉在最后一段）</span><select id="fEnd"></select></label>
+          <label class="f"><span>档位</span>
+            <div class="ctrl" id="fTier">
+              <button data-v="fast">快速 4 步</button><button data-v="quality">画质 8 步</button>
+            </div>
+          </label>
+          <label class="f"><span>分辨率</span><select id="fMp">
+            <option value="0.5">0.5 MP · 960×544</option>
+            <option value="0.98">0.98 MP · 1344×768</option>
+            <option value="0.4">0.4 MP · 864×480</option>
+            <option value="0.2">0.2 MP · 608×352</option>
+          </select></label>
+          <label class="f"><span>每段帧数（H3 只能取 17k+5）</span><select id="fSegFrames"></select></label>
+          <label class="f"><span>段数（由分镜表行数决定）</span><input type="text" id="fSegs" readonly></label>
+          <label class="f"><span>音频交叉淡化（秒）</span><input type="number" id="fXf" min="0" max="2" step="0.05" value="0.15"></label>
+        </div>
+        <p class="hint" id="eta"></p>
+      </div>
+
+      <div class="sec" id="secScript">
+        <h2>① 剧本（在 Codex 里讨论定稿后贴进来，或写好让它切成段）</h2>
+        <div class="grid">
+          <label class="f"><span>写作档位</span><select id="fProfile">
+            <option value="concise">简洁（默认）</option>
+            <option value="official">官方严谨</option>
+            <option value="zh">中文友好</option>
+            <option value="creative">创意增强</option>
+            <option value="longform">长片规划</option>
+          </select></label>
+          <label class="f"><span>目标总时长（秒）</span><input type="number" id="fTotal" min="2" max="300" step="2" value="20"></label>
+          <label class="f"><span>每段时长</span><input type="text" id="fSegLen" value="2.33 秒（56 帧）" readonly></label>
+        </div>
+        <label class="f" style="display:block;margin-top:8px"><span>剧本正文</span>
+          <textarea id="fScript" style="min-height:140px" placeholder="把定稿的剧本贴在这里。&#10;&#10;想让它自动切段，就按「一段一行」或「【第 N 段】/分镜 N / 1. 2. 3.」这类标记写；没有标记时会按空行分段，再不行按句号切。"></textarea></label>
+        <div class="actions" style="margin:8px 0 0">
+          <button id="btnSaveScript"><svg viewBox="0 0 24 24"><path d="M5 5h11l3 3v11H5z"/><path d="M9 5v5h6V5"/><path d="M9 19v-5h6v5"/></svg>保存剧本</button>
+          <button class="primary" id="btnSplit"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M9 3v18"/></svg>切分镜</button>
+        </div>
+        <p class="hint" id="scriptHint">切分镜会按标记把剧本切成段，自动补上时间码头和「承接上一帧」，再交给下面的分镜表；亚秒级节拍和 1× 速度仍需你或我来补，自检会点出来。</p>
+      </div>
+
+      <div class="sec" id="secShots">
+        <h2>分镜表（时长由「每段帧数」决定 · 点「参考素材」格即可为该段绑定图片）</h2>
+        <p class="hint">动作节拍请切到<b>亚秒级</b>时间戳，并在描述里写明<b>正常 1× 速度</b>——实测这两条决定成片是"利落"还是"慢动作"。</p>
+        <div class="tablewrap">
+          <table class="shots">
+            <colgroup>
+              <col style="width:30px"><col style="width:76px"><col style="width:132px"><col style="width:96px">
+              <col style="width:96px"><col style="width:132px"><col style="width:142px"><col style="width:38px"><col style="width:32px">
+            </colgroup>
+            <thead><tr>
+              <th>#</th><th>时间码</th><th>画面节拍</th><th>镜头</th><th>声音</th>
+              <th>参考素材</th><th>本段成片</th><th>自检</th><th></th>
+            </tr></thead>
+            <tbody id="shotRows"></tbody>
+          </table>
+        </div>
+        <div class="actions" style="margin:8px 0 0">
+          <button id="btnAddSeg"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>加一段</button>
+          <button id="btnClearRefs"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>清空本段素材</button>
+        </div>
+      </div>
+
+      <div class="sec" id="secOps">
+        <h2>操作</h2>
+        <div class="gate" id="checkSummary"></div>
+        <div class="actions">
+          <button class="primary" id="btnSave"><svg viewBox="0 0 24 24"><path d="M5 5h11l3 3v11H5z"/><path d="M9 5v5h6V5"/><path d="M9 19v-5h6v5"/></svg>保存</button>
+          <button id="btnPlan"><svg viewBox="0 0 24 24"><path d="M9 6h10M9 12h10M9 18h10"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>预检（不生成）</button>
+          <button class="primary" id="btnRun"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>开始生成</button>
+          <span class="regen">
+            <span class="hint">重跑第</span>
+            <input type="number" id="regenFrom" min="1" step="1" value="1" title="要重跑的段号（1 起）">
+            <span class="hint">段</span>
+            <button id="btnRegenTail" title="从该段起重新生成到结尾；前面已生成的段不动，接缝保持一致"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>该段+后续</button>
+            <button id="btnRegenOnly" title="只重新生成这一段；它末帧会变，与下一段的接缝会跳变"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>仅此段</button>
+          </span>
+          <button id="btnResume"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>续跑未完成段</button>
+          <button id="btnAssemble"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>拼接成片</button>
+          <button id="btnEnhance" title="对成片做插帧 + 放大 + 高码率重编码，输出 1080p/48fps；约 1 小时/20 秒"><svg viewBox="0 0 24 24"><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/><path d="M9 9h6v6H9z"/></svg>增强成片</button>
+          <button class="danger" id="btnDel"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>删除任务</button>
+        </div>
+        <pre id="out">（操作的输出会显示在这里）</pre>
+      </div>
+
+      <div class="sec">
+        <h2>进度</h2>
+        <div class="bar"><i id="progBar"></i></div>
+        <div id="chips" class="chips"></div>
+        <pre id="log" style="margin-top:8px"></pre>
+      </div>
+    </div>
+    <div id="empty" class="hint">左侧选一个任务，或新建一个。新手建议先「预检」——它会构建接力链并让 ComfyUI 验图，但不消耗 GPU。</div>
+  </div>
+
+  <div class="col right">
+    <div class="sec">
+      <h2>素材（左键 = 设为起始图；已点亮某段素材格时左键 = 绑到那段；右键 = 更多）</h2>
+      <div class="actions" style="margin-bottom:8px">
+        <button id="btnUpload"><svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>上传图片</button>
+        <input type="file" id="filePick" accept="image/*" multiple hidden>
+      </div>
+      <div class="mattools">
+        <input type="text" id="matSearch" placeholder="搜索素材名…">
+        <div class="ctrl" id="matFilter">
+          <button data-v="all" class="on">全部</button><button data-v="unused">未用</button><button data-v="used">已用</button>
+        </div>
+      </div>
+      <div class="mats" id="mats"><p class="hint">把图片拖到这里，或点上传。</p></div>
+      <p class="hint">鼠标移到图上：左上角出现 <b>✕</b> 即可删除；右键：设为起始图 / 绑定到某段 / 打开原图 / 删除。<b>删除前会检查是否还被任务引用</b>，被引用会先弹确认。</p>
+      <p class="hint" id="matHint"></p>
+    </div>
+    <div class="sec">
+      <h2>成片</h2>
+      <div id="finalWrap"><p class="hint">还没有拼接过。</p></div>
+    </div>
+    <div class="sec">
+      <h2>分段文件</h2>
+      <div class="filelist" id="files"><p class="hint">—</p></div>
+    </div>
+    <div class="sec">
+      <h2>说明</h2>
+      <p class="hint">接力链：每段末尾的最后一帧自动成为下一段的首帧，所以接缝是同一张图的延续。每段帧数由上方下拉决定，且只能是 17k+5 的取值（H3 的硬约束）；模型训练区间是 124–362 帧（5.2–15.1 秒），低于 124 帧属于超纲使用。</p>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let state = {jobs: [], inputs: [], queue: {}}, sel = null, dirty = false, poll = 0, matSig = '';
+let pageShots = [], assignTarget = null, matFilter = 'all', matSearch = '';
+let lastCheck = null, checkTimer = null;
+const BUILD = '2026-10-10 20:58';   // bump on every UI change so a stale tab is obvious
+
+function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function tierName(t){ return t === 'quality' ? '画质 8 步' : '快速 4 步'; }
+function etaText(spec){
+  const segs = +spec.segments || 0;
+  if(!segs) return '';
+  const base = spec.tier === 'quality' ? 15 : 8;      // minutes per 56-frame segment
+  const mp = +spec.megapixels || 0.5, f = mp > 0.75 ? 2 : 1;
+  const scale = SEG_FRAMES / 56;
+  const per = base * scale;
+  const mins = segs * per * f;
+  const warn = SEG_FRAMES < TRAINED_MIN ? '　⚠ 当前帧数低于模型训练区间（124 帧）' : '';
+  return `预计：${segs} 段 × ${SEG_FRAMES} 帧（${segSeconds().toFixed(2)} 秒）· 每段约 ${per.toFixed(1)} 分钟`
+       + `${f>1?'（高分辨率 ×2）':''} ≈ 合计 ${(mins/60).toFixed(1)} 小时；成片素材 ${(segs*segSeconds()).toFixed(1)} 秒。${warn}`;
+}
+
+async function api(path, body){
+  const opts = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {};
+  const r = await fetch(path, opts);
+  return await r.json();
+}
+
+function renderJobs(){
+  const box = $('jobList');
+  if(!state.jobs.length){ box.innerHTML = '<p class="hint">还没有任务。</p>'; return; }
+  box.innerHTML = state.jobs.map(j => `
+    <div class="job ${j.name===sel?'sel':''}" data-name="${esc(j.name)}">
+      <span class="nm">${esc(j.name)}</span>
+      <span class="ct">${j.done}/${j.segments||'?'}</span>
+    </div>`).join('');
+  [...box.querySelectorAll('.job')].forEach(el => {
+    el.onclick = () => selectJob(el.dataset.name);
+    el.oncontextmenu = e => { e.preventDefault(); showCtx(e.clientX, e.clientY, el.dataset.name); };
+  });
+}
+
+// ---- right-click menus (task list + material wall) ----
+let ctxMenu = null;
+function hideCtx(){ if(ctxMenu){ ctxMenu.remove(); ctxMenu = null; } }
+function openMenu(x, y, items){
+  hideCtx();
+  const m = document.createElement('div');
+  m.className = 'ctxmenu';
+  m.innerHTML = items.map((it, k) =>
+    `<button data-k="${k}" class="${it.danger ? 'danger' : ''}" ${it.disabled ? 'disabled' : ''}>${esc(it.label)}</button>`
+  ).join('');
+  document.body.appendChild(m);
+  const r = m.getBoundingClientRect();
+  m.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 6)) + 'px';
+  m.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 6)) + 'px';
+  m.querySelectorAll('button[data-k]').forEach(b => {
+    b.onclick = () => {
+      const it = items[+b.dataset.k];
+      hideCtx();
+      if(!it.disabled && it.onClick) it.onClick();
+    };
+  });
+  ctxMenu = m;
+}
+function showCtx(x, y, name){
+  openMenu(x, y, [{
+    label: `删除任务「${name}」`, danger: true,
+    onClick: () => {
+      if(!confirm('删除任务 ' + name + '？（只删运行记录，不动已生成的 mp4）')) return;
+      api('/api/delete', {name}).then(() => {
+        if(sel === name){ sel = null; dirty = false; }
+        refresh();
+      });
+    }
+  }]);
+}
+function matArmedIndex(){
+  return (assignTarget !== null && pageShots[assignTarget]) ? assignTarget : null;
+}
+async function loadAsStart(name){
+  $('fImage').value = name;
+  if(pageShots[0]) pageShots[0].start_frame = name;
+  dirty = true;                       // do NOT auto-save: a stray click must not
+  renderMaterials(name);              // silently rewrite a running job's spec
+  $('matHint').textContent = '已设为整片起始图：' + name + '（点「保存」才写入任务）';
+}
+async function deleteMaterial(name){
+  let r = await api('/api/delete_image', {filename: name});
+  if(!r.ok && r.need_confirm){
+    if(!confirm(r.message + '\n\n删掉后这些任务会缺图，需要重新指定。确定删除吗？')) return;
+    r = await api('/api/delete_image', {filename: name, confirm_used: true});
+  }
+  if(!r.ok){ $('matHint').textContent = '删除失败：' + (r.message || ''); return; }
+  pageShots.forEach(s => { if(s.refs) s.refs = s.refs.filter(x => x !== name); });
+  if($('fImage').value === name){ $('fImage').value = ''; if(pageShots[0]) pageShots[0].start_frame = ''; }
+  dirty = true;
+  matSig = '';
+  await save();                       // persist the cleaned refs / start frame
+  renderMaterials($('fImage').value);
+  $('matHint').textContent = '已删除素材：' + name + (r.used && r.used.length ? '（原用于 ' + r.used.join('、') + '）' : '');
+}
+function showMatCtx(x, y, name){
+  const idx = matArmedIndex();
+  openMenu(x, y, [
+    { label: '设为整片起始图', onClick: () => loadAsStart(name) },
+    { label: idx === null ? '绑定到某段（先点该段的素材格）' : `绑定到第 ${idx+1} 段`,
+      disabled: idx === null, onClick: () => bindRef(idx, name) },
+    { label: '打开原图', onClick: () => window.open('/inputmedia?f=' + encodeURIComponent(name), '_blank') },
+    { label: '删除这张图', danger: true, onClick: () => deleteMaterial(name) }
+  ]);
+}
+document.addEventListener('click', hideCtx);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') hideCtx(); });
+window.addEventListener('scroll', hideCtx, true);
+
+function renderEditor(){
+  const job = state.jobs.find(j => j.name === sel);
+  const has = !!job;
+  $('editor').style.display = has ? '' : 'none';
+  $('empty').style.display = has ? 'none' : '';
+  if(!has) return;
+  const spec = job.spec || {};
+  if(!dirty){
+    $('fName').value = job.name;
+    $('fMp').value = String(spec.megapixels ?? 0.5);
+    $('fXf').value = spec.crossfade ?? 0;
+    [...$('fTier').children].forEach(b => b.classList.toggle('on', (b.dataset.v||'fast') === (spec.tier||'fast')));
+    renderImageSelect(spec.start_image, spec.end_image);
+    SEG_FRAMES = +spec.segment_frames || 56;
+    fillFrameSelect();
+    pageShots = normalizeShots(spec.shots, spec.prompts);
+    $('fProfile').value = spec.writing_profile || 'concise';
+    $('fTotal').value = spec.total_seconds || (pageShots.length ? Math.round(pageShots.length * SEG_FRAMES / FPS) : 20);
+    $('fScript').value = job.script || '';
+    lastCheck = job.check || null;
+    renderShots();
+    renderMaterials(spec.start_image);
+  }
+  $('fSegs').value = pageShots.length + ' 段 · 每段 ' + segSeconds().toFixed(2) + ' 秒';
+  if($('fSegLen')) $('fSegLen').value = `${SEG_FRAMES} 帧 · ${segSeconds().toFixed(2)} 秒`;
+  $('eta').textContent = etaText({...spec, tier: curTier(), segments: pageShots.length});
+  $('out').textContent = job.lastOut || '（操作的输出会显示在这里）';
+  $('log').textContent = job.log || '';
+  const done = job.done || 0, total = job.segments || 0;
+  $('progBar').style.width = total ? (done/total*100)+'%' : '0';
+  $('chips').innerHTML = Array.from({length: total}, (_, i) =>
+    `<span class="chip ${i < done ? 'done':''}">${i+1}</span>`).join('');
+  $('files').innerHTML = (job.segment_files||[]).map(f =>
+    `<a href="/media?f=${encodeURIComponent(f)}" target="_blank">${esc(f)}</a>`).join('') || '<p class="hint">—</p>';
+  $('finalWrap').innerHTML = job.final
+    ? `<video controls preload="metadata" src="/media?f=${encodeURIComponent(job.final)}"></video>
+       <p class="hint"><a href="/media?f=${encodeURIComponent(job.final)}" target="_blank">${esc(job.final)}</a></p>`
+    : '<p class="hint">还没有拼接过。</p>';
+  renderCheckSummary();
+  applyCheckGate();
+}
+
+function renderImageSelect(current, currentEnd){
+  const opts = (state.inputs || []).map(i => i.name);
+  if(current && !opts.includes(current)) opts.unshift(current);
+  if(currentEnd && !opts.includes(currentEnd)) opts.unshift(currentEnd);
+  const list = opts.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  $('fImage').innerHTML = '<option value="">（不使用 · 纯文生视频）</option>' + list;
+  $('fImage').value = current || '';
+  if($('fEnd')){
+    $('fEnd').innerHTML = '<option value="">（不使用）</option>' + list;
+    $('fEnd').value = currentEnd || '';
+  }
+}
+
+function usageMap(){
+  const m = {};
+  pageShots.forEach((s, k) => (s.refs || []).forEach(r => { (m[r] = m[r] || []).push(k + 1); }));
+  return m;
+}
+function renderMaterials(current){
+  const box = $('mats');
+  const items = state.inputs || [];
+  const usage = usageMap();
+  const q = matSearch.trim().toLowerCase();
+  const sig = items.map(i => i.name).join('|') + '#' + (current || '') + '#' + matFilter + '#' + q + '#' + JSON.stringify(usage);
+  if(sig === matSig) return;
+  matSig = sig;
+  const list = items.filter(i => {
+    const used = (usage[i.name] || []).length > 0;
+    if(matFilter === 'unused' && used) return false;
+    if(matFilter === 'used' && !used) return false;
+    if(q && !i.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  if(!list.length){ box.innerHTML = '<p class="hint">没有符合条件的素材。</p>'; return; }
+  box.innerHTML = list.map(i => {
+    const u = usage[i.name] || [];
+    const tip = i.name + (u.length ? ' · 用于第 ' + u.join(',') + ' 段' : ' · 未使用');
+    return `<div class="mat ${i.name===current?'sel':''}" data-name="${esc(i.name)}" title="${esc(tip)}" draggable="true">
+      ${u.length ? `<span class="use">${u.join(',')}</span>` : ''}
+      <button class="del" title="删除这张图" draggable="false">✕</button>
+      <img loading="lazy" src="/thumb?f=${encodeURIComponent(i.name)}" alt="">
+      <span>${esc(i.name)}</span></div>`;
+  }).join('');
+  [...box.querySelectorAll('.mat')].forEach(el => {
+    el.ondragstart = e => { e.dataTransfer.setData('text/plain', el.dataset.name); e.dataTransfer.effectAllowed = 'copy'; };
+    el.onclick = async () => {
+      if(assignTarget !== null){ bindRef(assignTarget, el.dataset.name); return; }
+      await loadAsStart(el.dataset.name);
+    };
+    el.oncontextmenu = e => { e.preventDefault(); showMatCtx(e.clientX, e.clientY, el.dataset.name); };
+    const del = el.querySelector('.del');
+    if(del) del.onclick = e => { e.stopPropagation(); e.preventDefault(); deleteMaterial(el.dataset.name); };
+  });
+}
+
+async function uploadFiles(files){
+  const list = [...files].filter(f => f.type.startsWith('image/'));
+  if(!list.length){ $('matHint').textContent = '没有可上传的图片。'; return; }
+  let ok = 0;
+  for(const f of list){
+    const b64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.readAsDataURL(f); });
+    const r = await api('/api/upload', {filename: f.name, __raw__: b64});
+    if(r.ok) ok++; else $('matHint').textContent = '失败：' + f.name + ' — ' + r.message;
+  }
+  $('matHint').textContent = `已上传 ${ok}/${list.length} 张到 D:\\ComfyUI\\input`;
+  await refresh();
+  renderMaterials($('fImage') ? $('fImage').value : null);
+}
+
+// H3's `length` snaps to a 17k+5 grid and is only trained on ~124-362 frames.
+const FPS = 24;
+let SEG_FRAMES = 56;
+const FRAME_GRID = Array.from({length: 22}, (_, k) => 5 + 17 * k).filter(v => v >= 56 && v <= 362);
+const TRAINED_MIN = 124, TRAINED_MAX = 362;
+function segSeconds(){ return SEG_FRAMES / FPS; }
+function beatScaffold(){
+  const S = segSeconds(), step = 0.8, lines = [];
+  let t = 0;
+  while(t < S - 0.01){
+    const e = Math.min(S, +(t + step).toFixed(2));
+    lines.push(`${t.toFixed(1)}-${e.toFixed(1)}s：`);
+    t = e;
+  }
+  return lines.join('\n');
+}
+function newShotPrompt(i){
+  const S = segSeconds();
+  return `【第 ${i+1} 段 · ${(i*S).toFixed(1)}–${((i+1)*S).toFixed(1)} 秒】承接上一帧继续，只描写这 ${S.toFixed(1)} 秒内发生的事；全程正常 1× 速度。\n${beatScaffold()}\n镜头：\n声音：`;
+}
+function frameLabel(v){
+  const sec = v / FPS;
+  const zone = (v < TRAINED_MIN) ? '　⚠低于训练区间' : (v > TRAINED_MAX ? '　⚠超出训练区间' : '');
+  return `${v} 帧 · ${sec.toFixed(2)} 秒${zone}`;
+}
+function fillFrameSelect(){
+  const sel = $('fSegFrames');
+  if(!sel) return;
+  sel.innerHTML = FRAME_GRID.map(v => `<option value="${v}">${frameLabel(v)}</option>`).join('');
+  sel.value = String(SEG_FRAMES);
+}
+function blankShot(i){
+  return {i, start: +((i-1)*SEG_FRAMES/FPS).toFixed(2), end: +((i*SEG_FRAMES/FPS).toFixed(2)),
+          beat:'', camera:'', sound:'', prompt:'', refs:[], start_frame:'', check:{}};
+}
+function normalizeShots(shots, prompts){
+  if(Array.isArray(shots) && shots.length){
+    return shots.map((s, k) => Object.assign(blankShot(k+1), s, {
+      i: k+1,
+      start: (s.start === undefined ? +((k*SEG_FRAMES/FPS).toFixed(2)) : s.start),
+      end: (s.end === undefined ? +(((k+1)*SEG_FRAMES/FPS).toFixed(2)) : s.end),
+      refs: Array.isArray(s.refs) ? s.refs.slice() : []
+    }));
+  }
+  const list = Array.isArray(prompts) ? prompts : [];
+  const n = Math.max(1, list.length || 1);
+  return Array.from({length:n}, (_, k) => Object.assign(blankShot(k+1), {prompt: list[k] || ''}));
+}
+function hasList(v){ return Array.isArray(v) ? v.length > 0 : !!v; }
+function checkLevel(c){
+  if(!c) return '';
+  if(hasList(c.bad)) return 'bad';
+  if(hasList(c.warn)) return 'warn';
+  return 'ok';
+}
+function checkDot(c){
+  const level = checkLevel(c);
+  return `<i class="${level}" title="${esc((c && c.note) || '自检待执行')}"></i>`;
+}
+
+// ---- Phase 1: script -> shots ----
+const PROFILE_LABEL = {concise:'简洁（默认）', official:'官方严谨', zh:'中文友好', creative:'创意增强', longform:'长片规划'};
+
+function splitScript(text){
+  const raw = String(text || '').trim();
+  if(!raw) return [];
+  const lines = raw.split(/\r?\n/);
+  const marker = /^\s*(?:#{1,6}\s*)?(?:【?\s*第\s*\d+\s*[段镜]\s*】?|分镜\s*\d+|镜头\s*\d+|\d+\s*[.、)])\s*/;
+  if(lines.filter(l => marker.test(l)).length >= 2){
+    const chunks = []; let cur = null;
+    for(const l of lines){
+      if(marker.test(l)){ if(cur) chunks.push(cur); cur = l.replace(marker, '').trim(); }
+      else if(cur !== null && l.trim()){ cur += '\n' + l.trim(); }
+    }
+    if(cur) chunks.push(cur);
+    if(chunks.length >= 2) return chunks;
+  }
+  let chunks = raw.split(/\n\s*\n+/).map(s => s.trim()).filter(Boolean);
+  if(chunks.length >= 2) return chunks;
+  chunks = raw.split(/(?<=[。！？!?；;])/).map(s => s.trim()).filter(Boolean);
+  return chunks.length ? chunks : [raw];
+}
+
+function applySplit(){
+  const chunks = splitScript($('fScript').value);
+  if(!chunks.length){ $('scriptHint').textContent = '剧本是空的，先写点东西再切。'; return; }
+  const segLen = SEG_FRAMES / FPS;
+  const hasStart = !!$('fImage').value;
+  pageShots = chunks.map((chunk, i) => {
+    const s = blankShot(i + 1);
+    const body = chunk.replace(/^\s*【?\s*第\s*\d+\s*[段镜][^\n]*?】?\s*/, '').trim();
+    const head = `【第 ${i+1} 段 · ${(i*segLen).toFixed(1)}–${((i+1)*segLen).toFixed(1)} 秒】`;
+    const cont = i === 0 ? '从起始参考图开始' : '承接上一帧继续';
+    s.prompt = `${head}${cont}。${body}`;
+    s.beat = (body.split(/\n/)[0] || '').slice(0, 60);
+    s.start_frame = i === 0 && hasStart ? $('fImage').value : '';
+    return s;
+  });
+  dirty = true;
+  renderShots();
+  renderEditor();
+  $('scriptHint').textContent =
+    `已切成 ${pageShots.length} 段（${PROFILE_LABEL[$('fProfile').value] || '简洁'} 档）≈ ${(pageShots.length*segLen).toFixed(1)} 秒素材，` +
+    `成片约 ${pageShots.length*2} 秒。还缺亚秒级节拍和 1× 速度的段，下面自检会标红——那两项要你或我来补。`;
+  scheduleCheck();
+}
+function checkMsg(c, kind){
+  if(!c) return [];
+  const v = c[kind];
+  if(Array.isArray(v)) return v;
+  return v ? [String(v)] : [];
+}
+
+// ---- rule-layer self-check: paints dots, gates 开始生成 ----
+function applyCheckGate(){
+  const blocked = !!(lastCheck && lastCheck.blocked);
+  [ $('btnRun'), $('btnResume') ].forEach(b => {
+    if(!b) return;
+    b.disabled = blocked;
+    b.title = blocked ? '自检未通过，先修掉下方红色阻断项' : '';
+  });
+}
+function renderCheckSummary(){
+  const box = $('checkSummary');
+  if(!box) return;
+  if(!lastCheck){
+    box.className = 'gate';
+    box.innerHTML = '<div><i class="dot"></i>自检待执行</div>';
+    return;
+  }
+  const blocks = lastCheck.blocks || [], warns = lastCheck.warns || [];
+  if(!lastCheck.blocked && !warns.length){
+    box.className = 'gate ok';
+    box.innerHTML = '<div><i class="dot ok"></i>自检通过 · 可以生成</div>';
+    return;
+  }
+  const li = xs => xs.map(b => `<li><span class="sc">${esc(b.scope)}</span> ${esc(b.msg)}</li>`).join('');
+  if(lastCheck.blocked){
+    box.className = 'gate blocked';
+    box.innerHTML = `<div><i class="dot bad"></i>自检未通过 · 已禁用生成（${blocks.length} 项阻断）</div>
+      <ul>${li(blocks)}</ul>
+      ${warns.length ? `<details><summary>另有 ${warns.length} 项提醒</summary><ul>${li(warns)}</ul></details>` : ''}`;
+  }else{
+    box.className = 'gate ok';
+    box.innerHTML = `<div><i class="dot warn"></i>自检通过 · 有 ${warns.length} 项提醒</div>
+      <details><summary>展开提醒</summary><ul>${li(warns)}</ul></details>`;
+  }
+}
+function paintCheck(){
+  const rows = $('shotRows').querySelectorAll('tr.shot-main');
+  rows.forEach((tr, idx) => {
+    const dot = tr.querySelector('.chk i');
+    if(!dot) return;
+    const c = (lastCheck && lastCheck.shots) ? lastCheck.shots[idx] : null;
+    dot.className = checkLevel(c);
+    dot.title = (c && c.note) || '自检待执行';
+  });
+  applyCheckGate();
+  renderCheckSummary();
+}
+function scheduleCheck(){
+  clearTimeout(checkTimer);
+  checkTimer = setTimeout(runCheck, 350);
+}
+async function runCheck(){
+  if(!sel) return;
+  const {spec} = collect();
+  let r;
+  try{ r = await api('/api/check', {name: sel, spec}); }catch(e){ return; }
+  if(!r || r.ok === false) return;
+  lastCheck = r;
+  paintCheck();
+}
+function renumber(){
+  pageShots.forEach((s, k) => {
+    s.i = k + 1;
+    s.start = +((k*SEG_FRAMES/FPS).toFixed(2));
+    s.end = +(((k+1)*SEG_FRAMES/FPS).toFixed(2));
+  });
+}
+function refChips(refs){
+  return (refs || []).map((r, k) => `<span class="refchip" title="${esc(r)}"><img src="/thumb?f=${encodeURIComponent(r)}" alt=""><b data-k="${k}" title="移除">×</b></span>`).join('');
+}
+let shotSig = '';
+function segFileFor(n){
+  const job = state.jobs.find(j => j.name === sel);
+  if(!job) return null;
+  const hits = (job.segment_files || []).filter(f => {
+    const m = String(f).match(/_seg_(\d+)_/);
+    return m && +m[1] === n;
+  });
+  return hits.length ? hits[hits.length - 1] : null;   // newest wins after a regen
+}
+function segPreview(n){
+  const f = segFileFor(n);
+  if(!f) return '<span class="hint">未生成</span>';
+  return `<video src="/media?f=${encodeURIComponent(f)}" preload="metadata" muted controls
+            title="${esc(f)}"></video>`;
+}
+function renderShots(){
+  const job = state.jobs.find(j => j.name === sel);
+  const sig = JSON.stringify(pageShots) + '|' + ((job && job.segment_files) || []).join(',')
+            + '|' + assignTarget;
+  if(sig === shotSig) return;          // avoid rebuilding (and restarting any playing clip)
+  shotSig = sig;
+  const tb = $('shotRows');
+  tb.innerHTML = '';
+  pageShots.forEach((s, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = 'shot-main' + (assignTarget === idx ? ' assign' : '');
+    tr.dataset.idx = idx;
+    tr.innerHTML = `
+      <td class="num">${idx+1}</td>
+      <td class="time">${s.start.toFixed(1)}–${s.end.toFixed(1)}s</td>
+      <td><input type="text" data-k="beat" value="${esc(s.beat||'')}" placeholder="这 2 秒发生什么"></td>
+      <td><input type="text" data-k="camera" value="${esc(s.camera||'')}" placeholder="镜头运动"></td>
+      <td><input type="text" data-k="sound" value="${esc(s.sound||'')}" placeholder="声音"></td>
+      <td class="refs">${refChips(s.refs)}<button class="mini addref" title="绑定参考素材">+</button></td>
+      <td class="segvid">${segPreview(idx+1)}
+        <button class="mini regenseg" data-seg="${idx+1}" title="重跑第 ${idx+1} 段及其后">↻ 重跑</button></td>
+      <td class="chk">${checkDot(s.check)}</td>
+      <td><button class="mini del" title="删除这一段">✕</button></td>`;
+    tb.appendChild(tr);
+
+    const tr2 = document.createElement('tr');
+    tr2.className = 'shot-prompt';
+    tr2.innerHTML = `<td></td><td colspan="8"><textarea data-k="prompt" placeholder="第 ${idx+1} 段提示词（${s.start.toFixed(1)}–${s.end.toFixed(1)} 秒）：只写这一小段的动作/镜头/声音；动作要给亚秒级时间戳并写明 1× 速度">${esc(s.prompt||'')}</textarea></td>`;
+    tb.appendChild(tr2);
+
+    tr.querySelectorAll('input[data-k]').forEach(inp => inp.oninput = () => { pageShots[idx][inp.dataset.k] = inp.value; dirty = true; scheduleCheck(); });
+    tr2.querySelector('textarea').oninput = e => { pageShots[idx].prompt = e.target.value; dirty = true; scheduleCheck(); };
+    tr.querySelector('.del').onclick = () => removeSegment(idx);
+    tr.querySelector('.addref').onclick = () => armAssign(idx);
+    const rg = tr.querySelector('.regenseg');
+    if(rg) rg.onclick = () => { $('regenFrom').value = idx + 1; regen(false); };
+    tr.querySelectorAll('.refchip b').forEach(b => b.onclick = e => {
+      e.stopPropagation();
+      pageShots[idx].refs.splice(+b.dataset.k, 1);
+      dirty = true; renderShots(); renderMaterials($('fImage').value); scheduleCheck();
+    });
+    ['dragover','dragenter'].forEach(t => tr.addEventListener(t, e => { e.preventDefault(); tr.classList.add('assign'); }));
+    ['dragleave','drop'].forEach(t => tr.addEventListener(t, e => {
+      e.preventDefault();
+      if(t === 'drop' && e.dataTransfer.getData('text/plain')) bindRef(idx, e.dataTransfer.getData('text/plain'));
+      if(t !== 'dragover') tr.classList.remove('assign');
+    }));
+  });
+}
+function armAssign(idx){
+  assignTarget = (assignTarget === idx) ? null : idx;
+  renderShots();
+  $('matHint').textContent = assignTarget === null ? '' :
+    `现在点素材墙里的图 → 绑定到第 ${idx+1} 段（再点一次该段素材格的 + 可取消）`;
+}
+function bindRef(idx, name){
+  const s = pageShots[idx];
+  if(!s || !name) return;
+  if(!s.refs.includes(name)) s.refs.push(name);
+  dirty = true; assignTarget = null;
+  renderShots(); renderMaterials($('fImage').value);
+  $('matHint').textContent = `已把 ${name} 绑定到第 ${idx+1} 段`;
+  scheduleCheck();
+}
+
+function curTier(){ const on = $('fTier').querySelector('button.on'); return on ? on.dataset.v : 'fast'; }
+
+function collect(){
+  const name = $('fName').value.trim();
+  if(pageShots[0] && $('fImage').value) pageShots[0].start_frame = $('fImage').value;
+  return {name, spec: {
+    name,
+    start_image: $('fImage').value,
+    source_mode: $('fImage').value ? 'image' : 'text',
+    end_image: $('fEnd') ? $('fEnd').value : '',
+    tier: curTier(),
+    megapixels: +$('fMp').value,
+    segment_frames: SEG_FRAMES,
+    segments: pageShots.length,
+    crossfade: +$('fXf').value,
+    writing_profile: $('fProfile').value,
+    total_seconds: +$('fTotal').value || 0,
+    shots: pageShots,
+    prompts: pageShots.map(s => s.prompt || '')
+  }};
+}
+
+async function save(){
+  const {name, spec} = collect();
+  if(!name){ $('out').textContent = '任务名不能为空。'; return false; }
+  const r = await api('/api/save', {name, spec});
+  if(r.ok){ dirty = false; sel = r.name; await refresh(); }
+  else $('out').textContent = r.message;
+  return r.ok;
+}
+
+async function action(a, extra){
+  if(!sel) return;
+  if(dirty && !(await save())) return;
+  $('out').textContent = '执行中…';
+  const r = await api('/api/action', {name: sel, action: a, ...(extra||{})});
+  $('out').textContent = (r.ok ? '✔ ' : '✘ ') + (r.message || '');
+  await refresh();
+}
+
+// re-render segment N, either the whole tail (safe) or just that segment
+async function regen(only){
+  if(!sel) return;
+  const total = pageShots.length;
+  let n = Math.round(+$('regenFrom').value || 1);
+  n = Math.max(1, Math.min(n, total));
+  $('regenFrom').value = n;
+  if(dirty && !(await save())) return;
+  if(n > 1 && !segFileFor(n - 1)){
+    $('out').textContent = `✘ 第 ${n-1} 段还没生成；重跑第 ${n} 段要从它的末帧接起。`;
+    return;
+  }
+  const tailN = total - n + 1;
+  const msg = only
+    ? `只重跑第 ${n} 段？\n\n它从第 ${n-1} 段的末帧重新生成。注意：这一段的末帧会变，`
+      + `而第 ${n+1} 段的首帧仍是旧末帧 —— 接缝处会跳变一次。`
+    : `重跑第 ${n} 段及其后 ${tailN} 段？\n\n前面 ${n-1} 段保持不动，接缝连续。`;
+  if(!confirm(msg)) return;
+  $('out').textContent = '已提交重跑…（进度与日志在下面）';
+  const r = await api('/api/action', {name: sel, action: 'regen', from: n, only: !!only});
+  $('out').textContent = (r.ok ? '✔ ' : '✘ ') + (r.message || '');
+  await refresh();
+}
+
+function removeSegment(i){
+  if(pageShots.length <= 1) return;
+  pageShots.splice(i, 1);
+  renumber(); dirty = true; renderShots(); renderEditor(); scheduleCheck();
+}
+
+function selectJob(name){ sel = name; dirty = false; renderJobs(); renderEditor(); $('out').textContent = '（操作的输出会显示在这里）'; }
+
+async function refresh(){
+  try{
+    state = await api('/api/state');
+  }catch(e){ return; }
+  poll = Date.now();
+  const q = state.queue || {};
+  const run = (q.queue_running||[]).length, pend = (q.queue_pending||[]).length;
+  $('comfyDot').className = 'dot ' + (q._error ? 'bad' : 'ok');
+  $('comfyTxt').textContent = q._error ? 'ComfyUI 未连接' : 'ComfyUI 已连接';
+  $('queueTxt').textContent = q._error ? '队列 —' : `队列 运行 ${run} · 排队 ${pend}`;
+  const mode = state.mode || 'command';
+  [...$('modeCtrl').children].forEach(b => b.classList.toggle('on', b.dataset.v === mode));
+  $('pollTxt').textContent = '已刷新 ' + new Date().toLocaleTimeString('zh-CN', {hour12:false});
+  if(!state.jobs.find(j => j.name === sel)) sel = state.jobs.length ? state.jobs[0].name : null;
+  renderJobs(); renderEditor();
+}
+
+$('btnRefresh').onclick = refresh;
+$('modeCtrl').onclick = async e => {
+  const b = e.target.closest('button[data-v]');
+  if(!b) return;
+  const r = await api('/api/mode', {mode: b.dataset.v});
+  if(!r.ok){ $('pollTxt').textContent = '切换失败：' + (r.message || ''); return; }
+  [...$('modeCtrl').children].forEach(x => x.classList.toggle('on', x.dataset.v === r.mode));
+  $('modeCtrl').title = r.mode === 'auto'
+    ? '自主模式：我按已定的计划自行决定并执行，不打断你'
+    : '命令模式：我等你指令再动手';
+  $('pollTxt').textContent = r.mode === 'auto' ? '已切到自主模式' : '已切到命令模式';
+};
+$('btnUpload').onclick = () => $('filePick').click();
+$('filePick').onchange = async e => { await uploadFiles(e.target.files); e.target.value = ''; };
+(() => {
+  const mats = $('mats');
+  ['dragenter','dragover'].forEach(t => mats.addEventListener(t, e => { e.preventDefault(); mats.classList.add('drop'); }));
+  ['dragleave','drop'].forEach(t => mats.addEventListener(t, e => {
+    e.preventDefault();
+    mats.classList.remove('drop');
+    if(t === 'drop' && e.dataTransfer && e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+  }));
+})();
+$('btnNew').onclick = async () => {
+  const name = prompt('新任务名（英文/数字较稳，如 shot_a）', 'shot_' + new Date().toISOString().slice(5,10).replace('-',''));
+  if(!name) return;
+  const segs = +(prompt('段数（每段 ' + segSeconds().toFixed(1) + ' 秒）', '5') || 5);
+  const spec = {name, start_image: (state.inputs[0] && state.inputs[0].name) || '', tier: 'fast', megapixels: 0.5,
+                segment_frames: SEG_FRAMES, segments: segs, crossfade: 0.15,
+                prompts: Array.from({length: segs}, (_, i) => newShotPrompt(i))};
+  await api('/api/save', {name, spec});
+  sel = name; dirty = false; await refresh();
+};
+$('fName').oninput = $('fImage').onchange = $('fEnd').onchange = $('fMp').onchange = $('fXf').oninput = () => { dirty = true; scheduleCheck(); };
+$('fSegFrames').onchange = () => {
+  SEG_FRAMES = +$('fSegFrames').value || 56;
+  dirty = true;
+  renumber();            // timecodes are derived from the segment length
+  renderShots();
+  renderEditor();
+  scheduleCheck();
+};
+$('fScript').oninput = () => { dirty = true; };
+$('fProfile').onchange = $('fTotal').onchange = () => { dirty = true; };
+$('btnSplit').onclick = () => { if(sel) applySplit(); };
+$('btnSaveScript').onclick = async () => {
+  if(!sel) return;
+  const r = await api('/api/script', {name: sel, script: $('fScript').value});
+  $('scriptHint').textContent = r.ok
+    ? `剧本已保存（${r.chars} 字）→ h3_runs\\${sel}\\script.md`
+    : ('保存失败：' + (r.message || ''));
+};
+[...$('fTier').children].forEach(b => b.onclick = () => {
+  [...$('fTier').children].forEach(x => x.classList.toggle('on', x === b));
+  dirty = true; renderEditor();
+});
+$('btnAddSeg').onclick = () => {
+  const s = blankShot(pageShots.length + 1);
+  s.prompt = newShotPrompt(pageShots.length);
+  pageShots.push(s);
+  dirty = true; renderShots(); renderEditor();
+  const rows = $('shotRows');
+  if(rows.lastElementChild) rows.lastElementChild.scrollIntoView({block:'nearest'});
+  scheduleCheck();
+};
+$('btnClearRefs').onclick = () => {
+  if(assignTarget === null){
+    $('matHint').textContent = '先点某一行的「参考素材」格（+ 号），再点这个按钮清空那段。';
+    return;
+  }
+  pageShots[assignTarget].refs = [];
+  dirty = true; renderShots(); renderMaterials($('fImage').value);
+};
+$('matSearch').oninput = e => { matSearch = e.target.value; matSig = ''; renderMaterials($('fImage').value); };
+[...$('matFilter').children].forEach(b => b.onclick = () => {
+  [...$('matFilter').children].forEach(x => x.classList.toggle('on', x === b));
+  matFilter = b.dataset.v; matSig = ''; renderMaterials($('fImage').value);
+});
+$('btnSave').onclick = save;
+function blockText(){
+  return '自检未通过，已阻止：\n' + (lastCheck.blocks || [])
+    .map(b => `  [阻断] ${b.scope}：${b.msg}`).join('\n');
+}
+$('btnPlan').onclick = async () => {
+  await runCheck();
+  if(lastCheck && lastCheck.blocked){ $('out').textContent = blockText(); return; }
+  action('plan');
+};
+$('btnRun').onclick = () => {
+  if(lastCheck && lastCheck.blocked){ $('out').textContent = blockText(); return; }
+  if(confirm('确认真开始生成？这一步会占用 GPU，可能几小时。')) action('run');
+};
+$('btnResume').onclick = () => {
+  if(lastCheck && lastCheck.blocked){ $('out').textContent = blockText(); return; }
+  action('run', {resume: true});
+};
+$('btnRegenTail').onclick = () => regen(false);
+$('btnRegenOnly').onclick = () => regen(true);
+$('btnAssemble').onclick = () => action('assemble');
+$('btnEnhance').onclick = () => {
+  if(confirm('对成片做插帧 + 放大 + 高码率重编码（输出 1080p/48fps）？\n在 8GB 卡上约 3.5 秒/帧，20 秒成片约 1 小时；这期间不要同时渲染。'))
+    action('enhance');
+};
+$('btnDel').onclick = async () => {
+  if(!sel || !confirm('删除任务 ' + sel + '？（只删运行记录，不动已生成的 mp4）')) return;
+  await api('/api/delete', {name: sel}); sel = null; dirty = false; await refresh();
+};
+
+// ---- sub-nav: jump between 剧本 / 分镜表 / 操作 ----
+const NAV_BTNS = [...document.querySelectorAll('#subnav button')];
+function jumpTo(id){
+  const el = document.getElementById(id), col = $('centerCol');
+  if(!el || !col) return;
+  const navH = ($('subnav') && $('subnav').offsetHeight) || 0;
+  const delta = el.getBoundingClientRect().top - col.getBoundingClientRect().top;
+  col.scrollTop += delta - navH - 8;
+  NAV_BTNS.forEach(b => b.classList.toggle('on', b.dataset.to === id));
+}
+NAV_BTNS.forEach(b => b.onclick = () => jumpTo(b.dataset.to));
+if($('centerCol')){
+  $('centerCol').addEventListener('scroll', () => {
+    const col = $('centerCol');
+    const navH = ($('subnav') && $('subnav').offsetHeight) || 0;
+    let best = null, bestD = Infinity;
+    NAV_BTNS.forEach(b => {
+      const el = document.getElementById(b.dataset.to);
+      if(!el) return;
+      const d = Math.abs(el.getBoundingClientRect().top - col.getBoundingClientRect().top - navH - 8);
+      if(d < bestD){ bestD = d; best = b.dataset.to; }
+    });
+    NAV_BTNS.forEach(b => b.classList.toggle('on', b.dataset.to === best));
+  }, {passive:true});
+}
+
+$('buildTxt').textContent = '构建 ' + BUILD;
+fillFrameSelect();
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
